@@ -235,6 +235,31 @@ trait InstallerHelper
     }
 
     /**
+     * @param string[] $map
+     */
+    protected function deletePhrases($map)
+    {
+        $titles = [];
+        foreach($map as $titlePattern)
+        {
+            $titles[] = ['title', 'LIKE', $titlePattern];
+        }
+
+        /** @var \XF\Finder\Phrase $phraseFinder */
+        $phraseFinder = \XF::finder('XF:Phrase');
+        /** @var \XF\Entity\Phrase[] $phrases */
+        $phrases = $phraseFinder
+            ->where('language_id', 0)
+            ->whereOr($titles)
+            ->fetch();
+
+        foreach ($phrases as $phrase)
+        {
+            $phrase->delete();
+        }
+    }
+
+    /**
      * @param string $old
      * @param string $new
      */

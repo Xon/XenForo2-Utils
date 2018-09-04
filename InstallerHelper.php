@@ -144,7 +144,6 @@ trait InstallerHelper
      * @param string $old
      * @param string $new
      * @param bool   $takeOwnership
-     * @throws \XF\PrintableException
      */
     protected function renameOption($old, $new, $takeOwnership = false)
     {
@@ -158,7 +157,69 @@ trait InstallerHelper
             {
                 $optionOld->addon_id = $this->addOn->getAddOnId();
             }
-            $optionOld->save();
+            $optionOld->saveIfChanged();
+        }
+    }
+
+    /**
+     * @param array $map
+     * @param bool  $deOwn
+     * @throws \XF\PrintableException
+     */
+    protected function renamePhrases($map, $deOwn = false)
+    {
+        $db = $this->db();
+
+        foreach ($map AS $from => $to)
+        {
+            $mySqlRegex = '^' . str_replace('*', '[a-zA-Z0-9_]+', $from) . '$';
+            $phpRegex = '/^' . str_replace('*', '([a-zA-Z0-9_]+)', $from) . '$/';
+            $replace = str_replace('*', '$1', $to);
+
+            $results = $db->fetchPairs("
+				SELECT phrase_id, title
+				FROM xf_phrase
+				WHERE title RLIKE ?
+					AND addon_id = ''
+			", $mySqlRegex);
+
+            if ($results)
+            {
+                /** @var \XF\Entity\Phrase[] $phrases */
+                $phrases = \XF::em()->findByIds('XF:Phrase', array_keys($results));
+                foreach ($results AS $phraseId => $oldTitle)
+                {
+                    if (isset($phrases[$phraseId]))
+                    {
+                        $newTitle = preg_replace($phpRegex, $replace, $oldTitle);
+
+                        $phrase = $phrases[$phraseId];
+                        $phrase->title = $newTitle;
+                        $phrase->global_cache = false;
+                        if ($deOwn)
+                        {
+                            $phrase->addon_id = '';
+                        }
+                        $phrase->save(false);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * @param string $old
+     * @param string $new
+     */
+    protected function renameStyleProperty($old, $new)
+    {
+        /** @var \XF\Entity\StyleProperty $optionOld */
+        $optionOld = \XF::finder('XF:StyleProperty')->where('property_name', '=', $old)->fetchOne();
+        $optionNew = \XF::finder('XF:StyleProperty')->where('property_name', '=', $new)->fetchOne();
+        if ($optionOld && !$optionNew)
+        {
+            $optionOld->property_name = $new;
+            $optionOld->saveIfChanged();
         }
     }
 

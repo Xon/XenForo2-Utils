@@ -81,6 +81,35 @@ trait InstallerHelper
     }
 
     /**
+     * @param array $newRegistrationDefaults
+     */
+    protected function applyRegistrationDefaults(array $newRegistrationDefaults)
+    {
+        /** @var \XF\Entity\Option $option */
+        $option = \XF::app()->finder('XF:Option')
+                            ->where('option_id', '=', 'registrationDefaults')
+                            ->fetchOne();
+
+        if (!$option)
+        {
+            // Option: Mr. XenForo I don't feel so good
+            throw new \LogicException("XenForo installation is damaged. Expected option 'registrationDefaults' to exist.");
+        }
+        $registrationDefaults = $option->option_value;
+
+        foreach ($newRegistrationDefaults AS $optionName => $optionDefault)
+        {
+            if (!isset($registrationDefaults[$optionName]))
+            {
+                $registrationDefaults[$optionName] = $optionDefault;
+            }
+        }
+
+        $option->option_value = $registrationDefaults;
+        $option->saveIfChanged();
+    }
+
+    /**
      * @param $oldGroupId
      * @param $oldPermissionId
      * @param $newGroupId

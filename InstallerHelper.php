@@ -176,6 +176,7 @@ trait InstallerHelper
     {
         /** @var \XF\Entity\Option $optionOld */
         $optionOld = \XF::finder('XF:Option')->whereId($old)->fetchOne();
+        /** @var \XF\Entity\Option $optionNew */
         $optionNew = \XF::finder('XF:Option')->whereId($new)->fetchOne();
         if ($optionOld && !$optionNew)
         {
@@ -185,6 +186,13 @@ trait InstallerHelper
                 $optionOld->addon_id = $this->addOn->getAddOnId();
             }
             $optionOld->saveIfChanged();
+        }
+        else if ($takeOwnership && $optionOld && $optionNew)
+        {
+            $optionNew->option_value = $optionOld->option_value;
+            $optionNew->addon_id = $this->addOn->getAddOnId();
+            $optionNew->save();
+            $optionOld->delete();
         }
     }
 

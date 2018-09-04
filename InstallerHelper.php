@@ -73,11 +73,38 @@ trait InstallerHelper
     {
         foreach($userGroups as $userGroupId)
         {
-            $this->db()->query(
-                "INSERT IGNORE INTO xf_permission_entry (user_group_id, user_id, permission_group_id, permission_id, permission_value, permission_value_int) VALUES
-                (?, 0, ?, ?, 'allow', '0')
-            ", [$userGroupId, $groupId, $permissionId]);
+            $this->applyGlobalPermissionForGroup($groupId, $permissionId, $userGroupId);
         }
+    }
+
+    /**
+     * @param string      $applyGroupId
+     * @param string      $applyPermissionId
+     * @param int         $userGroupId
+     */
+    public function applyGlobalPermissionForGroup($applyGroupId, $applyPermissionId, $userGroupId)
+    {
+        $this->db()->query(
+            "INSERT IGNORE INTO xf_permission_entry (user_group_id, user_id, permission_group_id, permission_id, permission_value, permission_value_int) VALUES
+                (?, 0, ?, ?, 'allow', '0')
+            ", [$userGroupId, $applyGroupId, $applyPermissionId]
+        );
+        $db = $this->db();
+    }
+
+    /**
+     * @param string $applyGroupId
+     * @param string $applyPermissionId
+     * @param int    $applyValue
+     * @param int    $userGroupId
+     */
+    public function applyGlobalPermissionIntForGroup($applyGroupId, $applyPermissionId, $applyValue, $userGroupId)
+    {
+        $this->db()->query(
+            "INSERT IGNORE INTO xf_permission_entry (user_group_id, user_id, permission_group_id, permission_id, permission_value, permission_value_int) VALUES
+                (?, 0, ?, ?, 'use_int', ?)
+            ", [$userGroupId, $applyGroupId, $applyPermissionId, $applyValue]
+        );
     }
 
     /**

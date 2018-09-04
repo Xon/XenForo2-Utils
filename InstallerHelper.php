@@ -301,4 +301,97 @@ trait InstallerHelper
             throw new \LogicException('Unknown schema DDL type ' . \get_class($table));
         }
     }
+
+    /**
+     * @param int $minAddonVersion
+     * @param int $maxThreads
+     * @param int $maxPosts
+     * @param int $maxUsers
+     * @return bool
+     */
+    protected function isCliRecommendedCheck($minAddonVersion, $maxThreads, $maxPosts, $maxUsers)
+    {
+        $totals = \XF::app()->db()->fetchOne("
+			SELECT data_value
+			FROM xf_data_registry
+			WHERE data_key IN ('boardTotals', 'forumStatistics')
+			LIMIT 1
+		");
+        if (!$totals)
+        {
+            return false;
+        }
+
+        $totals = @unserialize($totals);
+        if (!$totals)
+        {
+            return false;
+        }
+
+        if ($maxPosts && !empty($totals['messages']) && $totals['messages'] >= $maxPosts)
+        {
+            return true;
+        }
+
+        if ($maxUsers && !empty($totals['users']) && $totals['users'] >= $maxUsers)
+        {
+            return true;
+        }
+
+        if ($maxThreads && !empty($totals['threads']) && $totals['threads'] >= $maxThreads)
+        {
+            return true;
+        }
+
+        if ($minAddonVersion)
+        {
+            $existing = $this->addOn->getInstalledAddOn();
+            if ($existing === null || $existing->version_id < $minAddonVersion)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param string[] $warnings
+     * @param string   $name
+     * @param int      $minAddonVersion
+     * @param int      $maxThreads
+     * @param int      $maxPosts
+     * @param int      $maxUsers
+     * @return bool
+     */
+    public function isCliRecommended(&$warnings, $name, $minAddonVersion = 0, $maxThreads = 0, $maxPosts = 500000, $maxUsers = 50000)
+    {
+        if (\XF::app() instanceof \XF\Admin\App && $this->isCliRecommendedCheck($minAddonVersion, $maxThreads, $maxPosts, $maxUsers))
+        {
+            $existing = $this->addOn->getInstalledAddOn();
+            if ($existing)
+            {
+                $html = 'Your XenForo installation is large. You may wish to upgrade via the command line.<br/>
+			Simply run this command from within the root XenForo directory and follow the on-screen instructions:<br/>
+			<pre style="margin: 1em 2em">php cmd.php xf-addon:upgrade ' . \XF::escapeString($this->addOn->getAddOnId()) . '</pre>
+			You can continue with the browser-based upgrade, but large queries may cause browser timeouts<br/>
+			that will force you to reload the page.';
+            }
+            else
+            {
+                $html = 'Your XenForo installation is large. You may wish to install via the command line.<br/>
+			Simply run this command from within the root XenForo directory and follow the on-screen instructions:<br/>
+			<pre style="margin: 1em 2em">php cmd.php xf-addon:install ' . \XF::escapeString($this->addOn->getAddOnId()) . '</pre>
+			You can continue with the browser-based upgrade, but large queries may cause browser timeouts<br/>
+			that will force you to reload the page.';
+            }
+            LanguagePhrasing::forceSetPhrase(\XF::language(), $name, $html);
+
+            $warnings[] = \XF::phrase($name);
+
+            return true;
+        }
+
+        return false;
+    }
 }

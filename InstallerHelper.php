@@ -6,10 +6,64 @@ use XF\Db\Schema\Alter;
 use XF\Db\Schema\Create;
 
 /**
+ * @property \XF\AddOn\AddOn addOn
+ *
  * @method \XF\Db\AbstractAdapter db()
+ * @method \XF\Db\SchemaManager schemaManager()
  */
 trait InstallerHelper
 {
+    /**
+     * @param string $addonId
+     * @param int    $minVersion
+     * @return bool|int
+     */
+    protected function addonExists($addonId, $minVersion = 0)
+    {
+        $addOns = \XF::app()->container('addon.cache');
+        if (empty($addOns[$addonId]))
+        {
+            return false;
+        }
+        else if ($minVersion && ($addOns[$addonId] < $minVersion))
+        {
+            return false;
+        }
+
+        return $addOns[$addonId];
+    }
+
+    /*
+     * @param      $title
+     * @param      $value
+     * @param bool $deOwn
+     *
+     * @throws \XF\PrintableException
+     */
+    protected function addDefaultPhrase($title, $value, $deOwn = true)
+    {
+        /** @var \XF\Entity\Phrase $phrase */
+        $phrase = \XF::app()->finder('XF:Phrase')
+                     ->where('title', '=', $title)
+                     ->where('language_id', '=', 0)
+                     ->fetchOne();
+        if (!$phrase)
+        {
+            $phrase = \XF::em()->create('XF:Phrase');
+            $phrase->language_id = 0;
+            $phrase->title = $title;
+            $phrase->phrase_text = $value;
+            $phrase->global_cache = false;
+            $phrase->addon_id = '';
+            $phrase->save(false);
+        }
+        else if ($deOwn && $phrase->addon_id === $this->addOn->getAddOnId())
+        {
+            $phrase->addon_id = '';
+            $phrase->save(false);
+        }
+    }
+
     /**
      * @param int   $groupId
      * @param int   $permissionId
@@ -58,12 +112,12 @@ trait InstallerHelper
     }
 
     /**
-     * @param $old
-     * @param $new
-     *
+     * @param string $old
+     * @param string $new
+     * @param bool   $takeOwnership
      * @throws \XF\PrintableException
      */
-    protected function renameOption($old, $new)
+    protected function renameOption($old, $new, $takeOwnership = false)
     {
         /** @var \XF\Entity\Option $optionOld */
         $optionOld = \XF::finder('XF:Option')->whereId($old)->fetchOne();
@@ -71,7 +125,32 @@ trait InstallerHelper
         if ($optionOld && !$optionNew)
         {
             $optionOld->option_id = $new;
+            if ($takeOwnership)
+            {
+                $optionOld->addon_id = $this->addOn->getAddOnId();
+            }
             $optionOld->save();
+        }
+    }
+
+    /**
+     * @param string $old
+     * @param string $new
+     * @param bool   $dropOldIfNewExists
+     */
+    protected function migrateTable($old, $new, $dropOldIfNewExists = false)
+    {
+        $sm = $this->schemaManager();
+        if ($sm->tableExists($old))
+        {
+            if (!$sm->tableExists($new))
+            {
+                $sm->renameTable($old, $new);
+            }
+            else if ($dropOldIfNewExists)
+            {
+                $sm->dropTable($old);
+            }
         }
     }
 

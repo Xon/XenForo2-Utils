@@ -4,6 +4,7 @@ namespace SV\Utils\Finder;
 
 /**
  * @property array joins
+ * @property string[] indexHints
  * @property \XF\Db\AbstractAdapter db
  *
  * @method string columnSqlName(string $column, bool $markFundamental = true)
@@ -12,15 +13,57 @@ trait SqlJoinTrait
 {
     /** @var array */
     protected $rawJoins = [];
+    protected $hasTableExpr = false;
+
+    public function getQuery(array $options = [])
+    {
+        $joins = $this->joins;
+        $indexHints = $this->indexHints;
+        if ($this->hasTableExpr)
+        {
+            $countOnly = !empty($options['countOnly']);
+
+            $complexJoins = [];
+            foreach($this->rawJoins as $alias => $columns)
+            {
+                $join = $this->joins[$alias];
+                if ($join['hasTableExpr'])
+                {
+                    if ($countOnly && !$join['fundamental'])
+                    {
+                        continue;
+                    }
+
+                    $joinType = $join['exists'] ? 'INNER' : 'LEFT';
+
+                    $complexJoins[] = "{$joinType} JOIN {$join['table']} AS `{$join['alias']}` ON ({$join['condition']})";
+
+                    unset($this->joins[$alias]);
+                }
+            }
+            $this->indexHints[] = "\n". implode('', $complexJoins);
+        }
+        try
+        {
+            /** @noinspection PhpUndefinedClassInspection */
+            return parent::getQuery($options);
+        }
+        finally
+        {
+            $this->joins = $joins;
+            $this->indexHints = $indexHints;
+        }
+    }
 
     /**
      * @param string $rawJoinTable
      * @param string $alias
      * @param array  $columns
      * @param bool   $mustExist
+     * @param bool   $hasTableExpr
      * @return $this
      */
-    public function sqlJoin($rawJoinTable, $alias, array $columns, $mustExist = false)
+    public function sqlJoin($rawJoinTable, $alias, array $columns, $mustExist = false, $hasTableExpr = false)
     {
         $columns = \array_fill_keys($columns, true);
         $this->rawJoins[$alias] = isset($this->rawJoins[$alias]) ? $this->rawJoins[$alias] + $columns : $columns;
@@ -31,10 +74,13 @@ trait SqlJoinTrait
 
             return $this;
         }
+        $this->hasTableExpr = $this->hasTableExpr || $hasTableExpr;
 
         $this->joins[$alias] = [
             'rawJoin'        => true,
-            // the $this->>oin entry must match the following structure, with 'fetch' being false so getHydrationMap doesn't try to parse this
+            // arbitrary table expressions need to be rewritten into index hints cos XF quotes the table name
+            'hasTableExpr'   => $hasTableExpr,
+            // the $this->join entry must match the following structure, with 'fetch' being false so getHydrationMap doesn't try to parse this
             'table'          => $rawJoinTable,
             'alias'          => $alias,
             'condition'      => '',

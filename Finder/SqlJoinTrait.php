@@ -108,9 +108,8 @@ trait SqlJoinTrait
     /**
      * @param string $alias
      * @param array  $conditions
-     * @param bool   $makeFundementalIfUsed
      */
-    public function sqlJoinConditions($alias, array $conditions, $makeFundementalIfUsed = true)
+    public function sqlJoinConditions($alias, array $conditions)
     {
         if (empty($this->rawJoins[$alias]) || empty($this->joins[$alias]))
         {
@@ -168,10 +167,7 @@ trait SqlJoinTrait
             }
         }
 
-        if ($makeFundementalIfUsed)
-        {
-            $this->joins[$alias]['fundamental'] = (bool)$joinConditions;
-        }
+        $this->joins[$alias]['fundamental'] = (bool)$joinConditions;
         $this->joins[$alias]['condition'] = implode(' AND ', $joinConditions);
     }
 

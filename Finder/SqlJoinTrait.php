@@ -19,8 +19,11 @@ trait SqlJoinTrait
     {
         $joins = $this->joins;
         $indexHints = $this->indexHints;
+        $hasTableExpr = $this->hasTableExpr;
         if ($this->hasTableExpr)
         {
+            // handle stacked instances of SqlJoinTrait
+            $this->hasTableExpr = false;
             $countOnly = !empty($options['countOnly']);
 
             $complexJoins = [];
@@ -52,6 +55,7 @@ trait SqlJoinTrait
         {
             $this->joins = $joins;
             $this->indexHints = $indexHints;
+            $this->hasTableExpr = $hasTableExpr;
         }
     }
 

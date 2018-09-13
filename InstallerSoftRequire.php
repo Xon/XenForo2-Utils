@@ -29,7 +29,7 @@ trait InstallerSoftRequire
      * @param array $errors
      * @param array $warnings
      */
-    protected function checkSoftRequires(array &$errors, array &$warnings)
+    protected function checkSoftRequires(&$errors, &$warnings)
     {
         $json = $this->addOn->getJson();
         if (empty($json['require-soft']))

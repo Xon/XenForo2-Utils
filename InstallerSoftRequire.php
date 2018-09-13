@@ -68,7 +68,12 @@ trait InstallerSoftRequire
                 $versionValid = ($version === '*' || ($enabled && $addOns[$productKey] >= $version));
             }
 
-            if (!$enabled || !$versionValid)
+            if (!$enabled)
+            {
+                continue;
+            }
+
+            if (!$versionValid)
             {
                 if ($errorType)
                 {

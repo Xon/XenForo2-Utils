@@ -11,6 +11,21 @@ use XF\Db\Schema\Create;
 trait InstallerSoftRequire
 {
     /**
+     * Supports a 'require-soft' section with near identical structure to 'require'
+     *
+     * An example;
+"require-soft" :{
+    "SV/Threadmarks": [
+        2000100,
+        "Threadmarks v2.0.3+",
+        false
+    ]
+},
+     * The 3rd array argument has 3 supported values, null/true/false
+     *   null/no exists - this is advisory for "Extra Cli Tools" when determining bulk install order, and isn't actually checked
+     *   false - if the item exists and is below the minimum version, log as a warning
+     *   true - if the item exists and is below the minimum version, log as an error
+     *
      * @param array $errors
      * @param array $warnings
      */
@@ -30,7 +45,7 @@ trait InstallerSoftRequire
             }
             list ($version, $product) = $requirement;
             $errorType = count($requirement) >= 3 ? $requirement[2] : null;
-            // advisor
+            // advisory
             if ($errorType === null)
             {
                 continue;

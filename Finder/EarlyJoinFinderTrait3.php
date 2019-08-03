@@ -129,7 +129,7 @@ trait EarlyJoinFinderTrait3
         {
             $joinType = $join['exists'] ? 'INNER' : 'LEFT';
 
-            if (!empty($join['hasTableExpr']))
+            if (!empty($join['rawJoin']))
             {
                 if (!empty($join['reallyFundamental']))
                 {
@@ -186,12 +186,12 @@ trait EarlyJoinFinderTrait3
         if (count($parts) === 2)
         {
             list($alias, $column) = $parts;
-            if (isset($this->rawJoins[$alias][$column]))
+            if (!empty($this->joins[$alias]['rawJoin']) && isset($this->rawJoins[$alias][$column]))
             {
                 if ($markJoinFundamental)
                 {
                     $this->joins[$alias]['reallyFundamental'] = true;
-                    $this->joins[$alias]['fundamental'] = $markJoinFundamental;
+                    $this->joins[$alias]['fundamental'] = true;
                 }
 
                 return [$alias, $column];

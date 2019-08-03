@@ -6,11 +6,13 @@ use XF\Mvc\Entity\FinderExpression;
 use XF\Mvc\Entity\Structure;
 
 /**
+ * Note; this avoids in-place updating of EarlyJoinFinderTrait as the Utils folder is distributed entirely with dependant add-ons
+ *
  * @method int getEarlyJoinThreshold
  * @property \XF\Db\AbstractAdapter $db
  * @property Structure $structure
  */
-trait EarlyJoinFinderTrait
+trait EarlyJoinFinderTrait3
 {
     /**
      * @param array $options
@@ -61,9 +63,24 @@ trait EarlyJoinFinderTrait
         $subQueryOptions = $options;
         $subQueryOptions['fetchOnly'] = [$primaryKey];
 
-        // do this before the outer-joins
-        /** @noinspection PhpUndefinedClassInspection */
-        $innerSql = parent::getQuery($subQueryOptions);
+        $oldJoins = $this->joins;
+        foreach($this->joins as $key => $join)
+        {
+            if (!$join['fundamental'])
+            {
+                unset($this->joins[$key]);
+            }
+        }
+        try
+        {
+            // do this before the outer-joins
+            /** @noinspection PhpUndefinedClassInspection */
+            $innerSql = parent::getQuery($subQueryOptions);
+        }
+        finally
+        {
+            $this->joins = $oldJoins;
+        }
 
         $defaultOrderSql = [];
         if (!$this->order && $this->defaultOrder)
@@ -112,6 +129,16 @@ trait EarlyJoinFinderTrait
         {
             $joinType = $join['exists'] ? 'INNER' : 'LEFT';
 
+            if (!empty($join['hasTableExpr']))
+            {
+                if (!empty($join['reallyFundamental']))
+                {
+                    $joins[] = "{$joinType} JOIN {$join['table']} AS `{$join['alias']}` ON ({$join['condition']})";
+                }
+
+                continue;
+            }
+
             $joins[] = "$joinType JOIN `$join[table]` AS `$join[alias]` ON ($join[condition])";
             if ($join['fetch'] && !is_array($fetchOnly))
             {
@@ -145,5 +172,33 @@ trait EarlyJoinFinderTrait
         ", $limit);
 
         return $q;
+    }
+
+    /**
+     * @param      $field
+     * @param bool $markJoinFundamental
+     *
+     * @return array
+     */
+    public function resolveFieldToTableAndColumn($field, $markJoinFundamental = true)
+    {
+        $parts = explode('.', $field);
+        if (count($parts) === 2)
+        {
+            list($alias, $column) = $parts;
+            if (isset($this->rawJoins[$alias][$column]))
+            {
+                if ($markJoinFundamental)
+                {
+                    $this->joins[$alias]['reallyFundamental'] = true;
+                    $this->joins[$alias]['fundamental'] = $markJoinFundamental;
+                }
+
+                return [$alias, $column];
+            }
+        }
+
+        /** @noinspection PhpUndefinedClassInspection */
+        return parent::resolveFieldToTableAndColumn($field, $markJoinFundamental);
     }
 }

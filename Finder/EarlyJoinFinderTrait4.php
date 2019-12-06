@@ -54,7 +54,7 @@ trait EarlyJoinFinderTrait4
         if ($this->parentFinder ||
             $threshold < 0 ||
             !$limit ||
-            !$threshold && (($offset / $limit) < $threshold) )
+            $threshold && (($offset / $limit) < $threshold) )
         {
             /** @noinspection PhpUndefinedClassInspection */
             return parent::getQuery($options);

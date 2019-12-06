@@ -12,7 +12,7 @@ use XF\Mvc\Entity\Structure;
  * @property \XF\Db\AbstractAdapter $db
  * @property Structure $structure
  */
-trait EarlyJoinFinderTrait3
+trait EarlyJoinFinderTrait4
 {
     /**
      * @param array $options
@@ -52,9 +52,9 @@ trait EarlyJoinFinderTrait3
         $threshold = $this->getEarlyJoinThreshold();
 
         if ($this->parentFinder ||
-            $threshold <= 0 ||
+            $threshold < 0 ||
             !$limit ||
-            $offset / $limit < $threshold )
+            !$threshold && (($offset / $limit) < $threshold) )
         {
             /** @noinspection PhpUndefinedClassInspection */
             return parent::getQuery($options);

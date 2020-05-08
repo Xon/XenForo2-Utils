@@ -60,13 +60,13 @@ trait InstallerSoftRequire
                 if (isset($parts[1]))
                 {
                     $enabled = phpversion($parts[1]) !== false;
-                    $versionValid = ($version === '*') || (version_compare(phpversion($parts[1]), $version) === 1);
+                    $versionValid = ($version === '*') || (version_compare(phpversion($parts[1]), $version, 'ge'));
                 }
             }
             else if (strpos($productKey, 'php') === 0)
             {
                 $enabled = true;
-                $versionValid = (version_compare(phpversion(), $version) === 1);
+                $versionValid = version_compare(phpversion(), $version, 'ge');
             }
             else if (strpos($productKey, 'mysql') === 0)
             {
@@ -74,7 +74,7 @@ trait InstallerSoftRequire
                 if ($mySqlVersion)
                 {
                     $enabled = true;
-                    $versionValid = (version_compare(strtolower($mySqlVersion), $version) === 1);
+                    $versionValid = version_compare(strtolower($mySqlVersion), $version, 'ge');
                 }
             }
             else

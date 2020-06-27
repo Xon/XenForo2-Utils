@@ -8,7 +8,7 @@ use XF\Db\Schema\Create;
 /**
  * @property \XF\AddOn\AddOn addOn
  */
-trait InstallerSoftRequire
+trait InstallerSoftRequire2
 {
     /**
      * Supports a 'require-soft' section with near identical structure to 'require'
